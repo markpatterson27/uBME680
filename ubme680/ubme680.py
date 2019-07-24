@@ -325,31 +325,28 @@ class uBME680_I2C(uBME680):
           will be from the previous reading."""
     def __init__(self, i2c, address=0x77, debug=False, *, refresh_rate=10):
         """Initialize the I2C device at the 'address' given"""
-        from adafruit_bus_device import i2c_device
-        self._i2c = i2c_device.I2CDevice(i2c, address)
+        self._i2c = i2c
+        self._address = address
         self._debug = debug
         super().__init__(refresh_rate=refresh_rate)
 
     def _read(self, register, length):
         """Returns an array of 'length' bytes from the 'register'"""
-        with self._i2c as i2c:
-            i2c.write(bytes([register & 0xFF]))
-            result = bytearray(length)
-            i2c.readinto(result)
-            if self._debug:
-                print("\t$%02X => %s" % (register, [hex(i) for i in result]))
-            return result
+        result = bytearray(length)
+        self._i2c.readfrom_mem_into(self._address, register, result)
+        if self._debug:
+            print("\t$%02X => %s" % (register, [hex(i) for i in result]))
+        return result
 
     def _write(self, register, values):
         """Writes an array of 'length' bytes to the 'register'"""
-        with self._i2c as i2c:
-            buffer = bytearray(2 * len(values))
-            for i, value in enumerate(values):
-                buffer[2 * i] = register + i
-                buffer[2 * i + 1] = value
-            i2c.write(buffer)
-            if self._debug:
-                print("\t$%02X <= %s" % (values[0], [hex(i) for i in values[1:]]))
+        buffer = bytearray(2 * len(values))
+        for i, value in enumerate(values):
+            buffer[2 * i] = register + i
+            buffer[2 * i + 1] = value
+        self._i2c.writeto(self._address, buffer)
+        if self._debug:
+            print("\t$%02X <= %s" % (values[0], [hex(i) for i in values[1:]]))
 
 # class uBME680_SPI(uBME680):
 #     """Driver for SPI connected BME680.
