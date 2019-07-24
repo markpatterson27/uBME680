@@ -33,7 +33,7 @@ CircuitPython driver from BME680 air quality sensor
 * Modified by Mark Patterson for MicroPython port
 """
 
-import time
+import utime
 import math
 from micropython import const
 try:
@@ -96,7 +96,7 @@ class uBME680:
         """Check the BME680 was found, read the coefficients and enable the sensor for continuous
            reads."""
         self._write(_BME680_REG_SOFTRESET, [0xB6])
-        time.sleep(0.005)
+        utime.sleep_ms(5)
 
         # Check device ID.
         chip_id = self._read_byte(_BME680_REG_CHIPID)
@@ -124,7 +124,7 @@ class uBME680:
         self._t_fine = None
 
         self._last_reading = 0
-        self._min_refresh_time = 1 / refresh_rate
+        self._min_refresh_time = 1000 / refresh_rate
 
     @property
     def pressure_oversample(self):
@@ -249,7 +249,7 @@ class uBME680:
     def _perform_reading(self):
         """Perform a single-shot reading from the sensor and fill internal data structure for
            calculations"""
-        if time.monotonic() - self._last_reading < self._min_refresh_time:
+        if utime.ticks_diff(utime.ticks_ms(), self._last_reading) < self._min_refresh_time:
             return
 
         # set filter
@@ -269,8 +269,8 @@ class uBME680:
         while not new_data:
             data = self._read(_BME680_REG_MEAS_STATUS, 15)
             new_data = data[0] & 0x80 != 0
-            time.sleep(0.005)
-        self._last_reading = time.monotonic()
+            utime.sleep_ms(5)
+        self._last_reading = utime.ticks_ms()
 
         self._adc_pres = _read24(data[2:5]) / 16
         self._adc_temp = _read24(data[5:8]) / 16
