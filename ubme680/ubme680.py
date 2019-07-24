@@ -30,6 +30,7 @@
 CircuitPython driver from BME680 air quality sensor
 
 * Author(s): ladyada
+* Modified by Mark Patterson for MicroPython port
 """
 
 import time
@@ -86,7 +87,7 @@ def _read24(arr):
     return ret
 
 
-class Adafruit_BME680:
+class uBME680:
     """Driver from BME680 air quality sensor
 
        :param int refresh_rate: Maximum number of readings per second. Faster property reads
@@ -315,7 +316,7 @@ class Adafruit_BME680:
     def _write(self, register, values):
         raise NotImplementedError()
 
-class Adafruit_BME680_I2C(Adafruit_BME680):
+class uBME680_I2C(uBME680):
     """Driver for I2C connected BME680.
 
         :param int address: I2C device address
@@ -350,55 +351,55 @@ class Adafruit_BME680_I2C(Adafruit_BME680):
             if self._debug:
                 print("\t$%02X <= %s" % (values[0], [hex(i) for i in values[1:]]))
 
-class Adafruit_BME680_SPI(Adafruit_BME680):
-    """Driver for SPI connected BME680.
+# class uBME680_SPI(uBME680):
+#     """Driver for SPI connected BME680.
 
-        :param busio.SPI spi: SPI device
-        :param digitalio.DigitalInOut cs: Chip Select
-        :param bool debug: Print debug statements when True.
-        :param int baudrate: Clock rate, default is 100000
-        :param int refresh_rate: Maximum number of readings per second. Faster property reads
-          will be from the previous reading.
-      """
+#         :param busio.SPI spi: SPI device
+#         :param digitalio.DigitalInOut cs: Chip Select
+#         :param bool debug: Print debug statements when True.
+#         :param int baudrate: Clock rate, default is 100000
+#         :param int refresh_rate: Maximum number of readings per second. Faster property reads
+#           will be from the previous reading.
+#       """
 
-    def __init__(self, spi, cs, baudrate=100000, debug=False, *, refresh_rate=10):
-        from adafruit_bus_device import spi_device
-        self._spi = spi_device.SPIDevice(spi, cs, baudrate=baudrate)
-        self._debug = debug
-        super().__init__(refresh_rate=refresh_rate)
+#     def __init__(self, spi, cs, baudrate=100000, debug=False, *, refresh_rate=10):
+#         from adafruit_bus_device import spi_device
+#         self._spi = spi_device.SPIDevice(spi, cs, baudrate=baudrate)
+#         self._debug = debug
+#         super().__init__(refresh_rate=refresh_rate)
 
-    def _read(self, register, length):
-        if register != _BME680_REG_STATUS:
-            #_BME680_REG_STATUS exists in both SPI memory pages
-            #For all other registers, we must set the correct memory page
-            self._set_spi_mem_page(register)
+#     def _read(self, register, length):
+#         if register != _BME680_REG_STATUS:
+#             #_BME680_REG_STATUS exists in both SPI memory pages
+#             #For all other registers, we must set the correct memory page
+#             self._set_spi_mem_page(register)
 
-        register = (register | 0x80) & 0xFF  # Read single, bit 7 high.
-        with self._spi as spi:
-            spi.write(bytearray([register]))  #pylint: disable=no-member
-            result = bytearray(length)
-            spi.readinto(result)              #pylint: disable=no-member
-            if self._debug:
-                print("\t$%02X => %s" % (register, [hex(i) for i in result]))
-            return result
+#         register = (register | 0x80) & 0xFF  # Read single, bit 7 high.
+#         with self._spi as spi:
+#             spi.write(bytearray([register]))  #pylint: disable=no-member
+#             result = bytearray(length)
+#             spi.readinto(result)              #pylint: disable=no-member
+#             if self._debug:
+#                 print("\t$%02X => %s" % (register, [hex(i) for i in result]))
+#             return result
 
-    def _write(self, register, values):
-        if register != _BME680_REG_STATUS:
-            #_BME680_REG_STATUS exists in both SPI memory pages
-            #For all other registers, we must set the correct memory page
-            self._set_spi_mem_page(register)
-        register &= 0x7F  # Write, bit 7 low.
-        with self._spi as spi:
-            buffer = bytearray(2 * len(values))
-            for i, value in enumerate(values):
-                buffer[2 * i] = register + i
-                buffer[2 * i + 1] = value & 0xFF
-            spi.write(buffer) #pylint: disable=no-member
-            if self._debug:
-                print("\t$%02X <= %s" % (values[0], [hex(i) for i in values[1:]]))
+#     def _write(self, register, values):
+#         if register != _BME680_REG_STATUS:
+#             #_BME680_REG_STATUS exists in both SPI memory pages
+#             #For all other registers, we must set the correct memory page
+#             self._set_spi_mem_page(register)
+#         register &= 0x7F  # Write, bit 7 low.
+#         with self._spi as spi:
+#             buffer = bytearray(2 * len(values))
+#             for i, value in enumerate(values):
+#                 buffer[2 * i] = register + i
+#                 buffer[2 * i + 1] = value & 0xFF
+#             spi.write(buffer) #pylint: disable=no-member
+#             if self._debug:
+#                 print("\t$%02X <= %s" % (values[0], [hex(i) for i in values[1:]]))
 
-    def _set_spi_mem_page(self, register):
-        spi_mem_page = 0x00
-        if register < 0x80:
-            spi_mem_page = 0x10
-        self._write(_BME680_REG_STATUS, [spi_mem_page])
+#     def _set_spi_mem_page(self, register):
+#         spi_mem_page = 0x00
+#         if register < 0x80:
+#             spi_mem_page = 0x10
+#         self._write(_BME680_REG_STATUS, [spi_mem_page])
