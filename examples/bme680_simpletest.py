@@ -1,20 +1,27 @@
 import time
-import board
-from busio import I2C
-import adafruit_bme680
+from machine import I2C, Pin
+import ubme680
 
 # Create library object using our Bus I2C port
-i2c = I2C(board.SCL, board.SDA)
-bme680 = adafruit_bme680.Adafruit_BME680_I2C(i2c, debug=False)
+i2c = I2C(-1, scl=Pin(22), sda=Pin(21), freq=100000)
+bme680 = ubme680.uBME680_I2C(i2c, debug=False)
 
 # change this to match the location's pressure (hPa) at sea level
 bme680.sea_level_pressure = 1013.25
 
-while True:
-    print("\nTemperature: %0.1f C" % bme680.temperature)
-    print("Gas: %d ohm" % bme680.gas)
-    print("Humidity: %0.1f %%" % bme680.humidity)
-    print("Pressure: %0.3f hPa" % bme680.pressure)
-    print("Altitude = %0.2f meters" % bme680.altitude)
+print('')
 
+print('| Temperature |  Humidity   |  Pressure   | Gas Resistance | Altitude |')
+print('| (C)         |  (%RH)      |  (hPa)      | (Ohms)         | (m)      |')
+print('|-------------|-------------|-------------|----------------|----------|')
+while True:
+    output = '| {0:>11.2f} | {1:>11.2f} | {2:>11.2f} | {3:>14.d} | {4:>8.2f} |'.format(
+                bme680.temperature,
+                bme680.humidity,
+                bme680.pressure,
+                bme680.gas,
+                bme680.altitude)
+    print(' '*71, end='\r') # clear previous printout
+    print(output, end='\r')
+    
     time.sleep(1)
