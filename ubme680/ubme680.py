@@ -109,7 +109,10 @@ class uBME680:
         # set up heater
         self._write(_BME680_BME680_RES_HEAT_0, [0x73])
         self._write(_BME680_BME680_GAS_WAIT_0, [0x65])
-        
+
+        self._run_gas_enabled = None
+        self.enable_run_gas()  #enable gas readings by default
+
         self.sea_level_pressure = 1013.25
         """Pressure in hectoPascals at sea level. Used to calibrate ``altitude``."""
 
@@ -128,6 +131,29 @@ class uBME680:
 
         self._last_reading = 0
         self._min_refresh_time = 1000 / refresh_rate
+
+    @property
+    def run_gas_enabled(self):
+        """Return run gas status"""
+        #return (self._read_byte(_BME680_REG_CTRL_GAS) & 0x10) >> 4
+        return self._run_gas_enabled
+
+    def _run_gas(self, value):
+        """Enable/disable gas sensor"""
+        if value in [0, 1]:
+            ctrl_gas = self._read_byte(_BME680_REG_CTRL_GAS)
+            ctrl_gas = (ctrl_gas & 0xEF) | (value << 4)
+            self._write(_BME680_REG_CTRL_GAS, [ctrl_gas])
+        else:
+            raise RuntimeError("Invalid run_gas setting")
+
+    def enable_run_gas(self):
+        self._run_gas(1)
+        self._run_gas_enabled = True
+
+    def disable_run_gas(self):
+        self._run_gas(0)
+        self._run_gas_enabled = False
 
     @property
     def pressure_oversample(self):
@@ -263,7 +289,8 @@ class uBME680:
         # turn on humidity oversample
         self._write(_BME680_REG_CTRL_HUM, [self._humidity_oversample])
         # gas measurements enabled
-        self._write(_BME680_REG_CTRL_GAS, [_BME680_RUNGAS])
+        #self._write(_BME680_REG_CTRL_GAS, [_BME680_RUNGAS])
+        # gas measurement enabled while initialising sensor object
 
         ctrl = self._read_byte(_BME680_REG_CTRL_MEAS)
         ctrl = (ctrl & 0xFC) | 0x01  # enable single shot!
